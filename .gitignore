@@ -8,3 +8,4 @@ Packages/*/.build/
 *.xcodeproj
 .swiftpm/
 .playwright-cli/
+Tools/*/out/
