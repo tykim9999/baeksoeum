@@ -45,6 +45,9 @@ The domain is **a parent's nursery at 2am**. Tired, eyes adjusting to dark, hold
 my-appletv-app/
   README.md
   DESIGN.md                            Lullaby Navy design system (tokens + sections per Stitch spec)
+  MARKETING.md                         App Store metadata in Korean + English
+  PRIVACY.md                           Privacy policy (PIPA + Apple App Privacy)
+  TESTFLIGHT.md                        Family-only distribution guide
   CLOUDSYNC.md                         3-step iCloud provisioning guide (deferred)
   project.yml                          xcodegen spec (iOS 18 + tvOS 18 multi-platform target)
 
