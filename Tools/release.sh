@@ -1,16 +1,21 @@
 #!/usr/bin/env bash
 #
-# Build TestFlight archives for iOS (and tvOS if profile is available),
-# export App-Store-signed .ipa(s) ready for upload.
+# One-command archive + upload for TestFlight.
 #
-#   ./Tools/release.sh           # build both, fall through tvOS if profile missing
-#   ./Tools/release.sh ios       # iOS only
-#   ./Tools/release.sh tvos      # tvOS only (requires Apple TV UDID registered in dev portal)
+#   ./Tools/release.sh ios            # archive + export iOS .ipa
+#   ./Tools/release.sh tvos           # archive + export tvOS .ipa
+#   ./Tools/release.sh both           # both
+#   ./Tools/release.sh upload-ios     # upload last-built iOS .ipa to App Store Connect
+#   ./Tools/release.sh upload-tvos    # upload last-built tvOS .ipa
+#   ./Tools/release.sh ship-ios       # archive + export + upload iOS in one shot
+#   ./Tools/release.sh ship-tvos      # same for tvOS
 #
-# Output:
-#   build/release/BaekSoeum-iOS.xcarchive
-#   build/release/iOS/BaekSoeum.ipa
-#   (and tvOS equivalents if successful)
+# Upload requires APPLE_ID and APPLE_APP_PASSWORD env vars (App-Specific
+# Password from https://appleid.apple.com/account/manage). Add to ~/.zshrc:
+#
+#   export APPLE_ID="dev.main.datalabs@gmail.com"
+#   export APPLE_APP_PASSWORD="xxxx-xxxx-xxxx-xxxx"
+#
 
 set -euo pipefail
 
@@ -22,8 +27,8 @@ SCHEME="BaekSoeum"
 mkdir -p "$OUT"
 
 archive_export() {
-  local platform="$1"            # iOS | tvOS
-  local destination="$2"         # generic/platform=iOS
+  local platform="$1"
+  local destination="$2"
   local method_dir="$OUT/$platform"
   local archive_path="$OUT/BaekSoeum-${platform}.xcarchive"
   local opts_path="$OUT/exportOptions-${platform}.plist"
@@ -77,33 +82,64 @@ EOF
   fi
 }
 
-target="${1:-both}"
+upload() {
+  local platform="$1"     # ios | tvos
+  local ipa="$OUT/${platform}/BaekSoeum.ipa"
+  # Note: xcrun altool's --type uses the lowercase short forms 'ios' and 'tvos'.
+  local altool_type="$platform"
 
-case "$target" in
-  ios|both)
-    archive_export iOS "generic/platform=iOS" || echo "[iOS] failed"
+  if [[ ! -f "$ipa" ]]; then
+    echo "missing $ipa -- run './Tools/release.sh $platform' first" >&2
+    return 1
+  fi
+
+  if [[ -z "${APPLE_ID:-}" || -z "${APPLE_APP_PASSWORD:-}" ]]; then
+    cat <<HELP >&2
+Missing credentials. Set in your shell (or ~/.zshrc):
+
+  export APPLE_ID="<your-apple-id-email>"
+  export APPLE_APP_PASSWORD="xxxx-xxxx-xxxx-xxxx"
+
+Generate the App-Specific Password at:
+  https://appleid.apple.com/account/manage
+  -> Sign-In and Security -> App-Specific Passwords -> Generate
+HELP
+    return 1
+  fi
+
+  echo "==> Validating $platform .ipa"
+  if ! xcrun altool --validate-app -f "$ipa" --type "$altool_type" \
+       -u "$APPLE_ID" -p "$APPLE_APP_PASSWORD" 2>&1 | tail -10; then
+    echo "[$platform] VALIDATION FAILED" >&2
+    return 1
+  fi
+
+  echo "==> Uploading $platform .ipa to App Store Connect"
+  xcrun altool --upload-app -f "$ipa" --type "$altool_type" \
+    -u "$APPLE_ID" -p "$APPLE_APP_PASSWORD" 2>&1 | tail -5
+
+  echo
+  echo "Build is now processing in App Store Connect (~5-15 min)."
+  echo "  https://appstoreconnect.apple.com -> My Apps -> TestFlight tab"
+}
+
+case "${1:-help}" in
+  ios)              archive_export iOS  "generic/platform=iOS"  ;;
+  tvos)             archive_export tvOS "generic/platform=tvOS" ;;
+  both)
+    archive_export iOS  "generic/platform=iOS"  || true
+    archive_export tvOS "generic/platform=tvOS" || true
     ;;
-esac
-
-case "$target" in
-  tvos|both)
-    if ! archive_export tvOS "generic/platform=tvOS"; then
-      cat <<HINT
-
-[tvOS] Archive failed. Most common reason: no tvOS device registered in the
-       developer account, so Apple cannot auto-create a tvOS Development
-       provisioning profile.
-
-  Fix: register your Apple TV's UDID at
-       https://developer.apple.com/account/resources/devices/list
-       Find UDID via: Settings -> General -> About -> tap-and-hold tvOS
-       Version, OR connect Apple TV to Xcode via wired Apple TV (Devices
-       and Simulators window).
-
-  Workaround: ship iOS-only to family for now (the iOS .ipa is ready);
-       add tvOS in a follow-up release.
-HINT
-    fi
+  upload-ios)       upload ios  ;;
+  upload-tvos)      upload tvos ;;
+  ship-ios)
+    archive_export iOS  "generic/platform=iOS" && upload ios
+    ;;
+  ship-tvos)
+    archive_export tvOS "generic/platform=tvOS" && upload tvos
+    ;;
+  help|*)
+    sed -n '3,30p' "$0"
     ;;
 esac
 

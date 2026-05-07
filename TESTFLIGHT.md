@@ -116,28 +116,36 @@ Two ways:
 4. Click **Deliver**
 5. Repeat with the tvOS .ipa
 
-**Option 2 — `xcrun altool` (CLI, scriptable)**
+**Option 2 — `xcrun altool` via `Tools/release.sh` (CLI, scriptable)**
 
 One-time setup:
-1. Generate an **App-Specific Password** at https://appleid.apple.com → Sign-In and Security → App-Specific Passwords. Save it (e.g. `abcd-efgh-ijkl-mnop`).
-2. Or generate an **App Store Connect API Key** at https://appstoreconnect.apple.com/access/api → Keys. More automation-friendly; download the .p8 file once.
+1. Generate an **App-Specific Password** at https://appleid.apple.com/account/manage → Sign-In and Security → App-Specific Passwords → Generate. Copy the password (e.g. `abcd-efgh-ijkl-mnop`).
+2. Add to `~/.zshrc`:
+   ```bash
+   export APPLE_ID="dev.main.datalabs@gmail.com"
+   export APPLE_APP_PASSWORD="abcd-efgh-ijkl-mnop"
+   ```
+3. `source ~/.zshrc` (or open a new shell).
 
 Per release:
 ```bash
-# With app-specific password
-xcrun altool --upload-app -f build/release/iOS/BaekSoeum.ipa \
-  --type ios \
-  -u dev.main.datalabs@gmail.com \
-  -p abcd-efgh-ijkl-mnop
+# Archive + export + upload iOS in one shot
+./Tools/release.sh ship-ios
 
-# Or with API key (recommended, no password in shell history)
-xcrun altool --upload-app -f build/release/iOS/BaekSoeum.ipa \
-  --type ios \
-  --apiKey YOUR_KEY_ID \
-  --apiIssuer YOUR_ISSUER_ID
+# Or split if you want to inspect the .ipa first
+./Tools/release.sh ios          # produce build/release/iOS/BaekSoeum.ipa
+./Tools/release.sh upload-ios   # upload it
+
+# tvOS once an Apple TV UDID is registered
+./Tools/release.sh ship-tvos
 ```
 
-Same command with `--type tvos` for the tvOS .ipa.
+The script runs `xcrun altool --validate-app` first (catches metadata
+errors before upload), then `xcrun altool --upload-app`. Both commands
+read `APPLE_ID` + `APPLE_APP_PASSWORD` from the environment.
+
+App-Specific Passwords expire when you change your main Apple ID
+password — regenerate if uploads start failing with auth errors.
 
 ### D. Wait for processing
 
