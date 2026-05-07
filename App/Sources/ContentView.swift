@@ -662,39 +662,64 @@ private struct PlayButton: View {
 
     var body: some View {
         Button(action: action) {
-            ZStack {
-                if isPlaying {
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [
-                                    Theme.Palette.primary.opacity(haloOpacity),
-                                    Theme.Palette.primary.opacity(0)
-                                ],
-                                center: .center,
-                                startRadius: Theme.Size.playButton * 0.5,
-                                endRadius: Theme.Size.playButton * (haloMultiplier * 0.5)
-                            )
-                        )
-                        .frame(width: Theme.Size.playButton * haloMultiplier,
-                               height: Theme.Size.playButton * haloMultiplier)
-                        .blur(radius: 14)
-                }
-                Circle()
-                    .fill(Theme.Palette.primary)
-                    .frame(width: Theme.Size.playButton, height: Theme.Size.playButton)
-                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                    .font(.system(size: Theme.Size.playButton * 0.4, weight: .semibold))
-                    .foregroundStyle(Theme.Palette.background)
-                    .offset(x: isPlaying ? 0 : Theme.Size.playButton * 0.04)
-            }
-            // Reserve a fixed footprint so the halo can't push neighbors around.
-            .frame(width: Theme.Size.playButton * haloMultiplier,
-                   height: Theme.Size.playButton * haloMultiplier)
+            PlayButtonLabel(isPlaying: isPlaying, haloMultiplier: haloMultiplier, haloOpacity: haloOpacity)
         }
         .buttonStyle(GlassButtonStyle(isCircular: true))
         .accessibilityIdentifier("play-button")
         .accessibilityLabel(isPlaying ? "일시정지" : "재생")
+    }
+}
+
+// Separate label view so it can read \.isFocused (set when the parent Button
+// is focused) and draw a focus ring sized to the *actual peach circle*,
+// not to the halo footprint frame.
+private struct PlayButtonLabel: View {
+    let isPlaying: Bool
+    let haloMultiplier: CGFloat
+    let haloOpacity: Double
+    @Environment(\.isFocused) private var isFocused
+
+    var body: some View {
+        ZStack {
+            if isPlaying {
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                Theme.Palette.primary.opacity(haloOpacity),
+                                Theme.Palette.primary.opacity(0)
+                            ],
+                            center: .center,
+                            startRadius: Theme.Size.playButton * 0.5,
+                            endRadius: Theme.Size.playButton * (haloMultiplier * 0.5)
+                        )
+                    )
+                    .frame(width: Theme.Size.playButton * haloMultiplier,
+                           height: Theme.Size.playButton * haloMultiplier)
+                    .blur(radius: 14)
+            }
+
+            // Peach circle + focus ring as one composed shape. The cream ring
+            // sits 4pt outside the actual button edge, regardless of halo size.
+            ZStack {
+                Circle()
+                    .fill(Theme.Palette.primary)
+                if isFocused {
+                    Circle()
+                        .stroke(Theme.Palette.foreground, lineWidth: 4)
+                        .padding(-4)
+                }
+            }
+            .frame(width: Theme.Size.playButton, height: Theme.Size.playButton)
+
+            Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                .font(.system(size: Theme.Size.playButton * 0.4, weight: .semibold))
+                .foregroundStyle(Theme.Palette.background)
+                .offset(x: isPlaying ? 0 : Theme.Size.playButton * 0.04)
+        }
+        // Reserve a fixed footprint so the halo can't push neighbors around.
+        .frame(width: Theme.Size.playButton * haloMultiplier,
+               height: Theme.Size.playButton * haloMultiplier)
     }
 }
 
@@ -803,39 +828,23 @@ private struct GlassButtonStyle: ButtonStyle {
     }
 }
 
+// Apple-TV-native focus treatment: lift (scale) + soft peach halo glow.
+// No stroke ring on cards/chips -- it would stack with the peach selection
+// border. Lift + halo + bg-tint convey focus clearly (see Apple Music +
+// native .card style). Circular play button draws its own cream ring
+// inside its body, sized to the actual button (not the halo footprint).
 private struct FocusReactiveContainer<Content: View>: View {
     let isCircular: Bool
     @ViewBuilder var content: () -> Content
     @Environment(\.isFocused) private var isFocused
 
-    // Cream stroke only for the peach play button (where peach-on-peach would
-    // be invisible). For everything else use peach so it doesn't conflict
-    // with the cream swatch on the 백색 noise card.
-    private var ringColor: Color {
-        isCircular ? Theme.Palette.foreground : Theme.Palette.primary
-    }
-
     var body: some View {
         content()
             .scaleEffect(isFocused ? Theme.Focus.scale : 1.0)
             .shadow(
-                color: Theme.Palette.primary.opacity(isFocused ? 0.55 : 0),
-                radius: 32, x: 0, y: 0
+                color: Theme.Palette.primary.opacity(isFocused ? 0.42 : 0),
+                radius: 26, x: 0, y: 0
             )
-            .overlay {
-                if isFocused {
-                    Group {
-                        if isCircular {
-                            Circle()
-                                .stroke(ringColor, lineWidth: Theme.Focus.ringWidth)
-                        } else {
-                            RoundedRectangle(cornerRadius: Theme.Radius.lg + Theme.Focus.ringOffset, style: .continuous)
-                                .stroke(ringColor, lineWidth: Theme.Focus.ringWidth)
-                        }
-                    }
-                    .padding(-Theme.Focus.ringOffset)
-                }
-            }
             .animation(.spring(response: 0.3, dampingFraction: 0.75), value: isFocused)
     }
 }

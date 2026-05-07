@@ -34,6 +34,11 @@ struct GlassPanelBackground: View {
 
 struct GlassCardBackground: View {
     let isSelected: Bool
+    // When the parent button is focused on tvOS, the focus halo IS the
+    // visible boundary. Drawing an inner peach selection stroke at the same
+    // time creates two concentric peach rings (ugly stack). Suppress the
+    // stroke while focused; bg tint + checkmark badge still convey selection.
+    @Environment(\.isFocused) private var isFocused
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
@@ -42,16 +47,19 @@ struct GlassCardBackground: View {
             if isSelected {
                 shape.fill(Theme.Palette.primary.opacity(0.22))
             }
-            shape.stroke(
-                isSelected ? Theme.Palette.primary : Color.white.opacity(0.06),
-                lineWidth: isSelected ? 3 : 1
-            )
+            if !isFocused {
+                shape.stroke(
+                    isSelected ? Theme.Palette.primary : Color.white.opacity(0.06),
+                    lineWidth: isSelected ? 3 : 1
+                )
+            }
         }
     }
 }
 
 struct GlassCapsuleBackground: View {
     let isSelected: Bool
+    @Environment(\.isFocused) private var isFocused
 
     var body: some View {
         let shape = Capsule()
@@ -60,10 +68,12 @@ struct GlassCapsuleBackground: View {
             if isSelected {
                 shape.fill(Theme.Palette.primary.opacity(0.22))
             }
-            shape.stroke(
-                isSelected ? Theme.Palette.primary : Color.white.opacity(0.06),
-                lineWidth: isSelected ? 3 : 1
-            )
+            if !isFocused {
+                shape.stroke(
+                    isSelected ? Theme.Palette.primary : Color.white.opacity(0.06),
+                    lineWidth: isSelected ? 3 : 1
+                )
+            }
         }
     }
 }
