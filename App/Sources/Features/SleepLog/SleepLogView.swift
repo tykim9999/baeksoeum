@@ -21,6 +21,8 @@ struct SleepLogView: View {
             .reduce(0) { $0 + ($1.durationSeconds ?? 0) }
     }
 
+    @State private var showingTummyTime: Bool = false
+
     var body: some View {
         ZStack {
             DynamicGradientBackground(
@@ -42,6 +44,29 @@ struct SleepLogView: View {
 
                     TodaySummaryCard(totalSeconds: todayTotalSeconds, eventCount: todayEventCount)
 
+                    Button { showingTummyTime = true } label: {
+                        HStack(spacing: Theme.Spacing.sm) {
+                            Image(systemName: "figure.child.circle")
+                                .font(.system(size: 28))
+                                .foregroundStyle(Theme.Palette.primary)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("배밀이 시작")
+                                    .font(Theme.Typography.body)
+                                    .foregroundStyle(Theme.Palette.foreground)
+                                Text("타이머 + 코칭")
+                                    .font(Theme.Typography.caption)
+                                    .foregroundStyle(Theme.Palette.foregroundMuted)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(Theme.Palette.foregroundMuted)
+                        }
+                        .padding(Theme.Spacing.md)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(GlassPanelBackground())
+                    }
+                    .buttonStyle(.plain)
+
                     WeeklyChartCard(events: weeklyEvents)
 
                     RecentEventsCard(events: Array(events.prefix(10)))
@@ -54,6 +79,11 @@ struct SleepLogView: View {
         }
         .preferredColorScheme(.dark)
         .onAppear { syncActive() }
+        .sheet(isPresented: $showingTummyTime) {
+            #if os(iOS)
+            NavigationStack { TummyTimeView() }
+            #endif
+        }
     }
 
     private var todayEventCount: Int {

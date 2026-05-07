@@ -50,6 +50,7 @@ struct SoundPlayerView: View {
     let sleepTimer: SleepTimer
     @FocusState private var focus: FocusTarget?
     @State private var isGlowMode: Bool = false
+    @State private var isTummyTime: Bool = false
 
     enum FocusTarget: Hashable {
         case play
@@ -58,6 +59,7 @@ struct SoundPlayerView: View {
         case womb(String)
         case timer(SleepTimer.Preset)
         case glowToggle
+        case tummyToggle
     }
 
     var body: some View {
@@ -73,6 +75,9 @@ struct SoundPlayerView: View {
                     onExit: { isGlowMode = false }
                 )
                 .transition(.opacity)
+            } else if isTummyTime {
+                TummyTimeOverlay(onExit: { isTummyTime = false })
+                    .transition(.opacity)
             } else {
                 DynamicGradientBackground(palette: palette)
                     .ignoresSafeArea()
@@ -83,7 +88,8 @@ struct SoundPlayerView: View {
                     sleepTimer: sleepTimer,
                     palette: palette,
                     focus: $focus,
-                    onEnterGlow: { withAnimation(.easeInOut(duration: 0.6)) { isGlowMode = true } }
+                    onEnterGlow: { withAnimation(.easeInOut(duration: 0.6)) { isGlowMode = true } },
+                    onEnterTummy: { withAnimation(.easeInOut(duration: 0.6)) { isTummyTime = true } }
                 )
                 #else
                 iOSPlayerLayout(
@@ -101,6 +107,36 @@ struct SoundPlayerView: View {
             focus = .play
             #endif
         }
+    }
+}
+
+private struct TummyTimeOverlay: View {
+    let onExit: () -> Void
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            ContrastSlideshow(advanceInterval: 5)
+
+            // Subtle exit hint (also captures input)
+            Text("Menu / 클릭으로 종료")
+                .font(Theme.Typography.caption)
+                .foregroundStyle(Color.black.opacity(0.4))
+                .padding(.horizontal, Theme.Spacing.sm)
+                .padding(.vertical, Theme.Spacing.xxs)
+                .background(Capsule().fill(Color.white.opacity(0.7)))
+                .padding(Theme.Spacing.lg)
+        }
+        .contentShape(Rectangle())
+        #if os(tvOS)
+        .focusable(true)
+        .focused($focused)
+        .onExitCommand(perform: onExit)
+        .onTapGesture(perform: onExit)
+        .onAppear { focused = true }
+        #else
+        .onTapGesture(perform: onExit)
+        #endif
     }
 }
 
@@ -183,6 +219,7 @@ private struct TVPlayerLayout: View {
     let palette: SoundPalette
     @FocusState.Binding var focus: SoundPlayerView.FocusTarget?
     let onEnterGlow: () -> Void
+    let onEnterTummy: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -213,6 +250,9 @@ private struct TVPlayerLayout: View {
 
                         GlowModeButton(action: onEnterGlow)
                             .focused($focus, equals: .glowToggle)
+
+                        TummyTimeButton(action: onEnterTummy)
+                            .focused($focus, equals: .tummyToggle)
                     }
                     .padding(.top, Theme.Spacing.sm)
                 }
@@ -634,6 +674,26 @@ private struct GlowModeButton: View {
                 Image(systemName: "moon.stars.fill")
                     .foregroundStyle(Theme.Palette.amber)
                 Text("달빛 모드")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Palette.foreground)
+            }
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.vertical, Theme.Spacing.xs)
+            .background(GlassCapsuleBackground(isSelected: false))
+        }
+        .buttonStyle(GlassButtonStyle(isCircular: false))
+    }
+}
+
+private struct TummyTimeButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: Theme.Spacing.xs) {
+                Image(systemName: "figure.child.circle")
+                    .foregroundStyle(Theme.Palette.primary)
+                Text("배밀이 시각자극")
                     .font(Theme.Typography.caption)
                     .foregroundStyle(Theme.Palette.foreground)
             }
