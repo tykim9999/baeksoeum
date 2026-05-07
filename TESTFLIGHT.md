@@ -147,6 +147,33 @@ read `APPLE_ID` + `APPLE_APP_PASSWORD` from the environment.
 App-Specific Passwords expire when you change your main Apple ID
 password — regenerate if uploads start failing with auth errors.
 
+### C2. Check status / manage testers from CLI (App Store Connect API)
+
+For status checks and tester management without leaving the terminal:
+
+**One-time API key setup** (~3 min):
+1. https://appstoreconnect.apple.com/access/integrations/api → **Keys** tab → ⊕ → name `cli`, Access **App Manager** → Generate
+2. Download the `.p8` file (Apple shows it ONCE — save somewhere safe like `~/.appstoreconnect/AuthKey_<KeyID>.p8`)
+3. Note the **Key ID** (10-char string in the row) and **Issuer ID** (UUID at the top of the Keys page)
+4. Add to `~/.zshrc`:
+   ```bash
+   export ASC_KEY_ID="ABCD1234EF"
+   export ASC_ISSUER_ID="01234567-89ab-cdef-0123-456789abcdef"
+   export ASC_KEY_PATH="$HOME/.appstoreconnect/AuthKey_ABCD1234EF.p8"
+   ```
+5. `source ~/.zshrc`
+
+**Subcommands**:
+```bash
+./Tools/release.sh status       # list recent builds + processing state
+./Tools/release.sh testers      # list internal testers
+./Tools/release.sh apps         # list your apps
+./Tools/release.sh invite alice@family.com Alice Smith
+```
+
+`status` is the one you'll use most — it polls the same data as the
+TestFlight tab in the web UI (build version, processingState, expiry).
+
 ### D. Wait for processing
 
 App Store Connect → TestFlight → **Builds**. Status goes:

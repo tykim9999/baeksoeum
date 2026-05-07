@@ -9,6 +9,10 @@
 #   ./Tools/release.sh upload-tvos    # upload last-built tvOS .ipa
 #   ./Tools/release.sh ship-ios       # archive + export + upload iOS in one shot
 #   ./Tools/release.sh ship-tvos      # same for tvOS
+#   ./Tools/release.sh status         # list recent builds via App Store Connect API
+#   ./Tools/release.sh testers        # list internal testers
+#   ./Tools/release.sh apps           # list all apps in your team
+#   ./Tools/release.sh invite <email> [<first> <last>]
 #
 # Upload requires APPLE_ID and APPLE_APP_PASSWORD env vars. APPLE_ID is the
 # Apple Developer Program account (tykim890813@gmail.com per team L324XMPY22),
@@ -109,16 +113,18 @@ HELP
     return 1
   fi
 
+  # Use @env: form so the password is read from the environment, not argv.
+  # Argv-form passwords leak via `ps`, shell history, and process snapshots.
   echo "==> Validating $platform .ipa"
   if ! xcrun altool --validate-app -f "$ipa" --type "$altool_type" \
-       -u "$APPLE_ID" -p "$APPLE_APP_PASSWORD" 2>&1 | tail -10; then
+       -u "$APPLE_ID" -p "@env:APPLE_APP_PASSWORD" 2>&1 | tail -10; then
     echo "[$platform] VALIDATION FAILED" >&2
     return 1
   fi
 
   echo "==> Uploading $platform .ipa to App Store Connect"
   xcrun altool --upload-app -f "$ipa" --type "$altool_type" \
-    -u "$APPLE_ID" -p "$APPLE_APP_PASSWORD" 2>&1 | tail -5
+    -u "$APPLE_ID" -p "@env:APPLE_APP_PASSWORD" 2>&1 | tail -5
 
   echo
   echo "Build is now processing in App Store Connect (~5-15 min)."
@@ -139,6 +145,13 @@ case "${1:-help}" in
     ;;
   ship-tvos)
     archive_export tvOS "generic/platform=tvOS" && upload tvos
+    ;;
+  status)           "$ROOT/Tools/asc.py" builds com.tykim.baeksoeum.BaekSoeum ;;
+  testers)          "$ROOT/Tools/asc.py" testers ;;
+  apps)             "$ROOT/Tools/asc.py" apps ;;
+  invite)
+    shift
+    "$ROOT/Tools/asc.py" invite com.tykim.baeksoeum.BaekSoeum "$@"
     ;;
   help|*)
     sed -n '3,30p' "$0"
