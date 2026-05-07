@@ -123,9 +123,9 @@ struct SoundPlayerView: View {
                 TummyTimeOverlay(onExit: { isTummyTime = false })
                     .transition(.opacity)
             } else {
-                DynamicGradientBackground(palette: palette)
-                    .ignoresSafeArea()
-
+                // Apply the gradient as .background so its .ignoresSafeArea
+                // doesn't propagate to the layout sibling and collapse safe
+                // area for content. Layout views respect safe area normally.
                 #if os(tvOS)
                 TVPlayerLayout(
                     audio: audio,
@@ -135,6 +135,11 @@ struct SoundPlayerView: View {
                     onEnterGlow: { withAnimation(.easeInOut(duration: 0.6)) { isGlowMode = true } },
                     onEnterTummy: { withAnimation(.easeInOut(duration: 0.6)) { isTummyTime = true } }
                 )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(
+                    DynamicGradientBackground(palette: palette)
+                        .ignoresSafeArea()
+                )
                 #else
                 iOSPlayerLayout(
                     audio: audio,
@@ -142,6 +147,11 @@ struct SoundPlayerView: View {
                     palette: palette,
                     focus: $focus,
                     onEnterGlow: { withAnimation(.easeInOut(duration: 0.6)) { isGlowMode = true } }
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(
+                    DynamicGradientBackground(palette: palette)
+                        .ignoresSafeArea()
                 )
                 #endif
             }
@@ -199,7 +209,7 @@ private struct TummyTimeOverlay: View {
 
 private func headline(for source: AudioCoordinator.Source) -> String {
     switch source {
-    case .none:                  return "백색소음"
+    case .none:                  return "달빛자장"
     case .noise(.white):         return "백색 소음"
     case .noise(.pink):          return "분홍 소음"
     case .noise(.brown):         return "갈색 소음"
@@ -218,7 +228,7 @@ private struct iOSPlayerLayout: View {
     var body: some View {
         ScrollView {
             VStack(spacing: Theme.Spacing.md) {
-                Text("백색소음")
+                Text("달빛자장")
                     .font(Theme.Typography.caption)
                     .foregroundStyle(Theme.Palette.foregroundMuted.opacity(0.7))
                     .padding(.top, Theme.Spacing.sm)
@@ -277,52 +287,56 @@ private struct TVPlayerLayout: View {
     let onEnterTummy: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Top: hero -- art + title/benefit + transport (play + timer ONLY)
-            HStack(alignment: .center, spacing: Theme.Spacing.xl) {
-                HeroCard(palette: palette, isPlaying: audio.isPlaying)
-                    .frame(width: 320, height: 320)
+        // ScrollView guarantees content fits / scrolls if needed and lets
+        // .padding work as expected. Apple HIG tvOS: keep content within ~90%
+        // of canvas; that's roughly 80pt top/bottom + 120pt sides on 1920x1080
+        // logical points.
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: Theme.Spacing.xl) {
+                // Hero -- art + title/benefit + transport
+                HStack(alignment: .center, spacing: Theme.Spacing.xl) {
+                    HeroCard(palette: palette, isPlaying: audio.isPlaying)
+                        .frame(width: 320, height: 320)
 
-                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                    Text(headline(for: audio.current))
-                        .font(Theme.Typography.display)
-                        .foregroundStyle(Theme.Palette.foreground)
-                        .lineLimit(2)
+                    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                        Text(headline(for: audio.current))
+                            .font(Theme.Typography.display)
+                            .foregroundStyle(Theme.Palette.foreground)
+                            .lineLimit(2)
 
-                    Text(palette.benefit)
-                        .font(Theme.Typography.body)
-                        .foregroundStyle(Theme.Palette.foreground.opacity(0.65))
-                        .frame(maxWidth: 720, alignment: .leading)
-                        .padding(.bottom, Theme.Spacing.sm)
+                        Text(palette.benefit)
+                            .font(Theme.Typography.body)
+                            .foregroundStyle(Theme.Palette.foreground.opacity(0.65))
+                            .frame(maxWidth: 720, alignment: .leading)
+                            .padding(.bottom, Theme.Spacing.sm)
 
-                    HStack(spacing: Theme.Spacing.lg) {
-                        PlayButton(
-                            isPlaying: audio.isPlaying,
-                            action: { audio.togglePlay() }
-                        )
-                        .focused($focus, equals: .play)
+                        HStack(spacing: Theme.Spacing.lg) {
+                            PlayButton(
+                                isPlaying: audio.isPlaying,
+                                action: { audio.togglePlay() }
+                            )
+                            .focused($focus, equals: .play)
 
-                        SleepTimerChip(timer: sleepTimer, focus: $focus)
+                            SleepTimerChip(timer: sleepTimer, focus: $focus)
+                        }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .padding(.horizontal, Theme.Spacing.xxl)
-            .padding(.top, Theme.Spacing.lg)
-            .frame(maxHeight: .infinity)
 
-            // Picker rows
-            SoundPicker(audio: audio, focus: $focus)
+                // Picker rows
+                SoundPicker(audio: audio, focus: $focus)
 
-            // Bottom strip: mode toggles
-            HStack(spacing: Theme.Spacing.md) {
-                GlowModeButton(action: onEnterGlow)
-                    .focused($focus, equals: .glowToggle)
-                TummyTimeButton(action: onEnterTummy)
-                    .focused($focus, equals: .tummyToggle)
+                // Mode toggles
+                HStack(spacing: Theme.Spacing.md) {
+                    GlowModeButton(action: onEnterGlow)
+                        .focused($focus, equals: .glowToggle)
+                    TummyTimeButton(action: onEnterTummy)
+                        .focused($focus, equals: .tummyToggle)
+                }
             }
-            .padding(.horizontal, Theme.Spacing.xxl)
-            .padding(.vertical, Theme.Spacing.md)
+            .padding(.top, 80)
+            .padding(.bottom, 60)
+            .padding(.horizontal, 120)
         }
     }
 

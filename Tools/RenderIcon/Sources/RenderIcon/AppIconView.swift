@@ -187,7 +187,7 @@ struct TopShelfView: View {
                 .frame(width: height * 0.7, height: height * 0.7)
 
                 VStack(alignment: .leading, spacing: height * 0.04) {
-                    Text("백색소음")
+                    Text("달빛자장")
                         .font(.system(size: height * 0.18, weight: .semibold, design: .default))
                         .foregroundStyle(Color(hex: 0xFAF8F4))
                     Text("잠, 자장가, 그리고 따뜻한 빛")
