@@ -122,7 +122,7 @@ One-time setup:
 1. Generate an **App-Specific Password** at https://appleid.apple.com/account/manage → Sign-In and Security → App-Specific Passwords → Generate. Copy the password (e.g. `abcd-efgh-ijkl-mnop`).
 2. Add to `~/.zshrc`:
    ```bash
-   export APPLE_ID="dev.main.datalabs@gmail.com"
+   export APPLE_ID="tykim890813@gmail.com"   # the Apple Developer Program account, NOT your public contact email
    export APPLE_APP_PASSWORD="abcd-efgh-ijkl-mnop"
    ```
 3. `source ~/.zshrc` (or open a new shell).

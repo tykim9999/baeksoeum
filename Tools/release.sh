@@ -10,10 +10,12 @@
 #   ./Tools/release.sh ship-ios       # archive + export + upload iOS in one shot
 #   ./Tools/release.sh ship-tvos      # same for tvOS
 #
-# Upload requires APPLE_ID and APPLE_APP_PASSWORD env vars (App-Specific
-# Password from https://appleid.apple.com/account/manage). Add to ~/.zshrc:
+# Upload requires APPLE_ID and APPLE_APP_PASSWORD env vars. APPLE_ID is the
+# Apple Developer Program account (tykim890813@gmail.com per team L324XMPY22),
+# NOT a public contact email. APPLE_APP_PASSWORD is an App-Specific Password
+# generated at https://appleid.apple.com/account/manage. Add to ~/.zshrc:
 #
-#   export APPLE_ID="dev.main.datalabs@gmail.com"
+#   export APPLE_ID="tykim890813@gmail.com"
 #   export APPLE_APP_PASSWORD="xxxx-xxxx-xxxx-xxxx"
 #
 
