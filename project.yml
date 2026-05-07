@@ -1,0 +1,42 @@
+name: BaekSoeum
+options:
+  bundleIdPrefix: com.tykim.baeksoeum
+  deploymentTarget:
+    iOS: "18.0"
+    tvOS: "18.0"
+  developmentLanguage: ko
+
+packages:
+  NoiseEngine:
+    path: Packages/NoiseEngine
+  LullabyEngine:
+    path: Packages/LullabyEngine
+
+targets:
+  BaekSoeum:
+    type: application
+    supportedDestinations: [iOS, tvOS]
+    sources:
+      - path: App/Sources
+      - path: App/Resources/Sounds
+        type: folder
+        buildPhase: resources
+        excludes:
+          - "README.md"
+    dependencies:
+      - package: NoiseEngine
+      - package: LullabyEngine
+    settings:
+      base:
+        TARGETED_DEVICE_FAMILY: "1,2,3"
+        SWIFT_VERSION: "6.0"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: L324XMPY22
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: "백색소음"
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIBackgroundModes: audio
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
