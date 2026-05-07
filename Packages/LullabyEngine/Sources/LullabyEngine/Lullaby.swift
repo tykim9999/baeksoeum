@@ -21,7 +21,11 @@ public struct Lullaby: Sendable, Identifiable, Hashable {
         self.fileExtension = fileExtension
     }
 
+    /// Look in the "Sounds" subdirectory first (xcodegen `type: folder` ships
+    /// resources at `<App>.app/Sounds/`); fall back to the bundle root for
+    /// flat-resource layouts (xcodegen `type: group`).
     public func url(in bundle: Bundle) -> URL? {
-        bundle.url(forResource: resourceName, withExtension: fileExtension)
+        bundle.url(forResource: resourceName, withExtension: fileExtension, subdirectory: "Sounds")
+            ?? bundle.url(forResource: resourceName, withExtension: fileExtension)
     }
 }

@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import AVFoundation
 import NoiseEngine
 import LullabyEngine
 
@@ -29,11 +30,25 @@ final class AudioCoordinator {
     private var prefs: SoundPreferences?
     private var isLoading: Bool = false
 
-    init() {}
+    init() {
+        configureAudioSession()
+    }
 
     func attach(modelContext: ModelContext) {
         self.modelContext = modelContext
         loadPreferences()
+    }
+
+    private func configureAudioSession() {
+        #if os(iOS) || os(tvOS)
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .default, options: [])
+            try session.setActive(true)
+        } catch {
+            print("audio session setup failed: \(error)")
+        }
+        #endif
     }
 
     private func loadPreferences() {
