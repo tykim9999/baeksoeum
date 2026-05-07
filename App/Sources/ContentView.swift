@@ -7,6 +7,9 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var audio = AudioCoordinator()
     @State private var sleepTimer = SleepTimer()
+    @State private var pendingMode: PendingMode?
+
+    enum PendingMode: Equatable { case glow, tummy, normal }
 
     var body: some View {
         rootView
@@ -17,28 +20,68 @@ struct ContentView: View {
                     audio.fadeOut(duration: duration)
                 }
             }
+            .onOpenURL(perform: handle)
+    }
+
+    private func handle(_ url: URL) {
+        guard url.scheme == "baeksoeum" else { return }
+        let host = url.host ?? ""
+        let arg = url.pathComponents.dropFirst().first  // first path segment after scheme://host/
+
+        switch host {
+        case "glow":
+            pendingMode = .glow
+        case "tummy":
+            pendingMode = .tummy
+        case "exit":
+            pendingMode = .normal
+        case "noise":
+            if let arg, let color = NoiseColor(rawValue: arg) {
+                audio.select(.noise(color))
+                if !audio.isPlaying { audio.play() }
+            }
+        case "lullaby":
+            if let arg, let track = LullabyCatalog.lullabies.first(where: { $0.id == arg }) {
+                audio.select(.lullaby(track))
+                if !audio.isPlaying { audio.play() }
+            }
+        case "womb":
+            if let arg, let track = LullabyCatalog.wombSounds.first(where: { $0.id == arg }) {
+                audio.select(.womb(track))
+                if !audio.isPlaying { audio.play() }
+            }
+        case "play":
+            if !audio.isPlaying { audio.play() }
+        case "pause":
+            audio.pause()
+        default:
+            break
+        }
     }
 
     @ViewBuilder
     private var rootView: some View {
         #if os(tvOS)
-        SoundPlayerView(audio: audio, sleepTimer: sleepTimer)
+        SoundPlayerView(audio: audio, sleepTimer: sleepTimer, pendingMode: $pendingMode)
         #else
         TabView {
-            SoundPlayerView(audio: audio, sleepTimer: sleepTimer)
+            SoundPlayerView(audio: audio, sleepTimer: sleepTimer, pendingMode: $pendingMode)
                 .tabItem {
                     Label("소리", systemImage: "speaker.wave.2.fill")
                 }
+                .accessibilityIdentifier("tab-sound")
 
             SleepLogView()
                 .tabItem {
                     Label("잠", systemImage: "moon.stars.fill")
                 }
+                .accessibilityIdentifier("tab-sleep")
 
             BedtimeRoutineView()
                 .tabItem {
                     Label("루틴", systemImage: "list.bullet")
                 }
+                .accessibilityIdentifier("tab-routine")
         }
         .tint(Theme.Palette.primary)
         #endif
@@ -48,6 +91,7 @@ struct ContentView: View {
 struct SoundPlayerView: View {
     let audio: AudioCoordinator
     let sleepTimer: SleepTimer
+    @Binding var pendingMode: ContentView.PendingMode?
     @FocusState private var focus: FocusTarget?
     @State private var isGlowMode: Bool = false
     @State private var isTummyTime: Bool = false
@@ -106,6 +150,17 @@ struct SoundPlayerView: View {
             #if os(tvOS)
             focus = .play
             #endif
+        }
+        .onChange(of: pendingMode) { _, mode in
+            guard let mode else { return }
+            withAnimation(.easeInOut(duration: 0.4)) {
+                switch mode {
+                case .glow:   isGlowMode = true;  isTummyTime = false
+                case .tummy:  isTummyTime = true; isGlowMode = false
+                case .normal: isGlowMode = false; isTummyTime = false
+                }
+            }
+            pendingMode = nil
         }
     }
 }
@@ -441,6 +496,7 @@ private struct SwatchButton: View {
             }
         }
         .buttonStyle(GlassButtonStyle(isCircular: false))
+        .accessibilityIdentifier("noise-\(color.rawValue)")
     }
 
     private var swatch: Color {
@@ -502,6 +558,7 @@ private struct LullabyCard: View {
             }
         }
         .buttonStyle(GlassButtonStyle(isCircular: false))
+        .accessibilityIdentifier("lullaby-\(lullaby.id)")
     }
 
     private var iconSize: CGFloat {
@@ -550,6 +607,7 @@ private struct WombChip: View {
             )
         }
         .buttonStyle(GlassButtonStyle(isCircular: false))
+        .accessibilityIdentifier("womb-\(track.id)")
     }
 }
 
@@ -611,6 +669,8 @@ private struct PlayButton: View {
             }
         }
         .buttonStyle(GlassButtonStyle(isCircular: true))
+        .accessibilityIdentifier("play-button")
+        .accessibilityLabel(isPlaying ? "일시정지" : "재생")
     }
 }
 
@@ -682,6 +742,7 @@ private struct GlowModeButton: View {
             .background(GlassCapsuleBackground(isSelected: false))
         }
         .buttonStyle(GlassButtonStyle(isCircular: false))
+        .accessibilityIdentifier("glow-toggle")
     }
 }
 
@@ -702,6 +763,7 @@ private struct TummyTimeButton: View {
             .background(GlassCapsuleBackground(isSelected: false))
         }
         .buttonStyle(GlassButtonStyle(isCircular: false))
+        .accessibilityIdentifier("tummy-toggle")
     }
 }
 
