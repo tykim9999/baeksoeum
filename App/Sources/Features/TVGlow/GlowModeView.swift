@@ -11,6 +11,7 @@ struct GlowModeView: View {
 
     @State private var dimLevel: Double = 1.0
     @State private var idleTask: Task<Void, Never>?
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         ZStack {
@@ -61,10 +62,18 @@ struct GlowModeView: View {
         .statusBarHidden(true)
         #endif
         #if os(tvOS)
+        .focusable(true)
+        .focused($isFocused)
         .onExitCommand(perform: onExit)
+        .onTapGesture(perform: onExit)
         #endif
         .opacity(dimLevel)
-        .onAppear { resetIdleDimmer() }
+        .onAppear {
+            resetIdleDimmer()
+            #if os(tvOS)
+            isFocused = true
+            #endif
+        }
         .onDisappear {
             idleTask?.cancel()
             idleTask = nil
@@ -89,7 +98,7 @@ struct GlowModeView: View {
 
     private var exitHint: String {
         #if os(tvOS)
-        "Menu 버튼을 누르면 종료"
+        "Menu 버튼 또는 클릭으로 종료"
         #else
         "화면을 탭하면 종료"
         #endif
