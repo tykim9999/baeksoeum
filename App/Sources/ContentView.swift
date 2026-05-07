@@ -278,12 +278,12 @@ private struct TVPlayerLayout: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Top: hero
+            // Top: hero -- art + title/benefit + transport (play + timer ONLY)
             HStack(alignment: .center, spacing: Theme.Spacing.xl) {
                 HeroCard(palette: palette, isPlaying: audio.isPlaying)
-                    .frame(width: 360, height: 360)
+                    .frame(width: 320, height: 320)
 
-                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                     Text(headline(for: audio.current))
                         .font(Theme.Typography.display)
                         .foregroundStyle(Theme.Palette.foreground)
@@ -292,7 +292,8 @@ private struct TVPlayerLayout: View {
                     Text(palette.benefit)
                         .font(Theme.Typography.body)
                         .foregroundStyle(Theme.Palette.foreground.opacity(0.65))
-                        .frame(maxWidth: 600, alignment: .leading)
+                        .frame(maxWidth: 720, alignment: .leading)
+                        .padding(.bottom, Theme.Spacing.sm)
 
                     HStack(spacing: Theme.Spacing.lg) {
                         PlayButton(
@@ -302,29 +303,26 @@ private struct TVPlayerLayout: View {
                         .focused($focus, equals: .play)
 
                         SleepTimerChip(timer: sleepTimer, focus: $focus)
-
-                        GlowModeButton(action: onEnterGlow)
-                            .focused($focus, equals: .glowToggle)
-
-                        TummyTimeButton(action: onEnterTummy)
-                            .focused($focus, equals: .tummyToggle)
                     }
-                    .padding(.top, Theme.Spacing.sm)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.horizontal, Theme.Spacing.xxl)
+            .padding(.top, Theme.Spacing.lg)
             .frame(maxHeight: .infinity)
 
-            // Bottom: picker
-            VStack(spacing: Theme.Spacing.md) {
-                Divider()
-                    .background(Color.white.opacity(0.08))
-                    .padding(.horizontal, Theme.Spacing.xxl)
+            // Picker rows
+            SoundPicker(audio: audio, focus: $focus)
 
-                SoundPicker(audio: audio, focus: $focus)
-                    .padding(.bottom, Theme.Spacing.lg)
+            // Bottom strip: mode toggles
+            HStack(spacing: Theme.Spacing.md) {
+                GlowModeButton(action: onEnterGlow)
+                    .focused($focus, equals: .glowToggle)
+                TummyTimeButton(action: onEnterTummy)
+                    .focused($focus, equals: .tummyToggle)
             }
+            .padding(.horizontal, Theme.Spacing.xxl)
+            .padding(.vertical, Theme.Spacing.md)
         }
     }
 
@@ -611,24 +609,30 @@ private struct WombChip: View {
     }
 }
 
+// Sits flush inside the card's top-right corner (no offset) so it doesn't
+// notch the selection border. Card has its own peach 4pt outer ring; the
+// badge is purely a glanceable confirmation icon.
 private struct SelectedBadge: View {
     var body: some View {
-        Circle()
-            .fill(Theme.Palette.primary)
-            .frame(width: size, height: size)
-            .overlay(
-                Image(systemName: "checkmark")
-                    .font(.system(size: size * 0.55, weight: .bold))
-                    .foregroundStyle(Theme.Palette.background)
-            )
-            .offset(x: size * 0.25, y: -size * 0.25)
+        ZStack {
+            Circle()
+                .fill(Theme.Palette.primary)
+                .frame(width: size, height: size)
+                .overlay(
+                    Circle().stroke(Theme.Palette.background, lineWidth: 2)
+                )
+            Image(systemName: "checkmark")
+                .font(.system(size: size * 0.55, weight: .bold))
+                .foregroundStyle(Theme.Palette.background)
+        }
+        .padding(Theme.Spacing.xxs)
     }
 
     private var size: CGFloat {
         #if os(tvOS)
-        32
+        28
         #else
-        20
+        18
         #endif
     }
 }
@@ -639,6 +643,23 @@ private struct PlayButton: View {
     let isPlaying: Bool
     let action: () -> Void
 
+    private var haloMultiplier: CGFloat {
+        // Constrain so the glow doesn't dwarf the surrounding controls on TV.
+        #if os(tvOS)
+        1.6
+        #else
+        2.4
+        #endif
+    }
+
+    private var haloOpacity: Double {
+        #if os(tvOS)
+        0.30
+        #else
+        0.40
+        #endif
+    }
+
     var body: some View {
         Button(action: action) {
             ZStack {
@@ -647,17 +668,17 @@ private struct PlayButton: View {
                         .fill(
                             RadialGradient(
                                 colors: [
-                                    Theme.Palette.primary.opacity(0.4),
+                                    Theme.Palette.primary.opacity(haloOpacity),
                                     Theme.Palette.primary.opacity(0)
                                 ],
                                 center: .center,
                                 startRadius: Theme.Size.playButton * 0.5,
-                                endRadius: Theme.Size.playButton * 1.5
+                                endRadius: Theme.Size.playButton * (haloMultiplier * 0.5)
                             )
                         )
-                        .frame(width: Theme.Size.playButton * 2.8,
-                               height: Theme.Size.playButton * 2.8)
-                        .blur(radius: 18)
+                        .frame(width: Theme.Size.playButton * haloMultiplier,
+                               height: Theme.Size.playButton * haloMultiplier)
+                        .blur(radius: 14)
                 }
                 Circle()
                     .fill(Theme.Palette.primary)
@@ -667,6 +688,9 @@ private struct PlayButton: View {
                     .foregroundStyle(Theme.Palette.background)
                     .offset(x: isPlaying ? 0 : Theme.Size.playButton * 0.04)
             }
+            // Reserve a fixed footprint so the halo can't push neighbors around.
+            .frame(width: Theme.Size.playButton * haloMultiplier,
+                   height: Theme.Size.playButton * haloMultiplier)
         }
         .buttonStyle(GlassButtonStyle(isCircular: true))
         .accessibilityIdentifier("play-button")
@@ -784,6 +808,13 @@ private struct FocusReactiveContainer<Content: View>: View {
     @ViewBuilder var content: () -> Content
     @Environment(\.isFocused) private var isFocused
 
+    // Cream stroke only for the peach play button (where peach-on-peach would
+    // be invisible). For everything else use peach so it doesn't conflict
+    // with the cream swatch on the 백색 noise card.
+    private var ringColor: Color {
+        isCircular ? Theme.Palette.foreground : Theme.Palette.primary
+    }
+
     var body: some View {
         content()
             .scaleEffect(isFocused ? Theme.Focus.scale : 1.0)
@@ -796,10 +827,10 @@ private struct FocusReactiveContainer<Content: View>: View {
                     Group {
                         if isCircular {
                             Circle()
-                                .stroke(Theme.Palette.foreground, lineWidth: Theme.Focus.ringWidth)
+                                .stroke(ringColor, lineWidth: Theme.Focus.ringWidth)
                         } else {
                             RoundedRectangle(cornerRadius: Theme.Radius.lg + Theme.Focus.ringOffset, style: .continuous)
-                                .stroke(Theme.Palette.foreground, lineWidth: Theme.Focus.ringWidth)
+                                .stroke(ringColor, lineWidth: Theme.Focus.ringWidth)
                         }
                     }
                     .padding(-Theme.Focus.ringOffset)

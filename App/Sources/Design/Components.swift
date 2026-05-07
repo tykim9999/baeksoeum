@@ -43,7 +43,7 @@ struct GlassCardBackground: View {
                 shape.fill(Theme.Palette.primary.opacity(0.22))
             }
             shape.stroke(
-                isSelected ? Theme.Palette.primary : Color.white.opacity(0.15),
+                isSelected ? Theme.Palette.primary : Color.white.opacity(0.06),
                 lineWidth: isSelected ? 3 : 1
             )
         }
@@ -61,7 +61,7 @@ struct GlassCapsuleBackground: View {
                 shape.fill(Theme.Palette.primary.opacity(0.22))
             }
             shape.stroke(
-                isSelected ? Theme.Palette.primary : Color.white.opacity(0.15),
+                isSelected ? Theme.Palette.primary : Color.white.opacity(0.06),
                 lineWidth: isSelected ? 3 : 1
             )
         }
