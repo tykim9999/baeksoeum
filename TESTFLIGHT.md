@@ -78,28 +78,66 @@ If the previous build is the same `MARKETING_VERSION` and `CURRENT_PROJECT_VERSI
 
 Edit in `project.yml`, then `xcodegen generate`.
 
-### B. Archive (Xcode UI)
+### B. Archive + export (CLI — recommended)
+
+```bash
+./Tools/release.sh both    # iOS + tvOS
+./Tools/release.sh ios     # iOS only
+./Tools/release.sh tvos    # tvOS only
+```
+
+Output:
+```
+build/release/iOS/BaekSoeum.ipa     (~6 MB)
+build/release/tvOS/BaekSoeum.ipa    (~6 MB, when tvOS device is registered)
+```
+
+The script handles archive + export with App-Store signing automatically.
+Re-run it whenever you bump the version.
+
+### B-alt. Archive (Xcode UI — fallback)
+
+If the CLI script ever fails, the Xcode UI flow still works:
 
 1. In Xcode, set the destination to **Any iOS Device (arm64)** at the top
 2. Product → **Archive**
-3. Wait. The Organizer opens.
-4. Repeat with destination **Any tvOS Device** for the tvOS build, OR enable both in one archive (Xcode 15+ supports multi-destination archive for multi-platform targets).
+3. Organizer opens → select archive → **Distribute App** → **App Store Connect** → Upload
+4. Repeat with destination **Any tvOS Device** for tvOS
 
-   For a single multi-platform archive:
-   - Select scheme `BaekSoeum`
-   - Destination: **Any Mac (Designed for iPad)** is irrelevant; pick **Any iOS Device (arm64)** then in Organizer choose "Distribute App for iOS" — for tvOS, archive a second time with tvOS destination. Two archives, but both go to the same app record.
+### C. Upload to App Store Connect
 
-### C. Distribute
+Two ways:
 
-In Organizer:
+**Option 1 — Transporter app (easiest, GUI, no CLI auth setup)**
 
-1. Select the new archive → **Distribute App**
-2. **App Store Connect** → Upload
-3. Sign with team `L324XMPY22`
-4. Defaults: include bitcode (off in modern Xcode), upload symbols (on), strip Swift symbols (on)
-5. Upload — takes 2-10 min
+1. Mac App Store → install **Transporter** (free, official Apple)
+2. Open Transporter, sign in with your Apple ID
+3. Drag `build/release/iOS/BaekSoeum.ipa` into the window
+4. Click **Deliver**
+5. Repeat with the tvOS .ipa
 
-Same for the tvOS archive.
+**Option 2 — `xcrun altool` (CLI, scriptable)**
+
+One-time setup:
+1. Generate an **App-Specific Password** at https://appleid.apple.com → Sign-In and Security → App-Specific Passwords. Save it (e.g. `abcd-efgh-ijkl-mnop`).
+2. Or generate an **App Store Connect API Key** at https://appstoreconnect.apple.com/access/api → Keys. More automation-friendly; download the .p8 file once.
+
+Per release:
+```bash
+# With app-specific password
+xcrun altool --upload-app -f build/release/iOS/BaekSoeum.ipa \
+  --type ios \
+  -u dev.main.datalabs@gmail.com \
+  -p abcd-efgh-ijkl-mnop
+
+# Or with API key (recommended, no password in shell history)
+xcrun altool --upload-app -f build/release/iOS/BaekSoeum.ipa \
+  --type ios \
+  --apiKey YOUR_KEY_ID \
+  --apiIssuer YOUR_ISSUER_ID
+```
+
+Same command with `--type tvos` for the tvOS .ipa.
 
 ### D. Wait for processing
 
@@ -163,6 +201,28 @@ Easy reminder: pick a calendar date the same day each quarter (e.g., 1st of ever
 - **Bundle ID consistency**: Xcode build setting `PRODUCT_BUNDLE_IDENTIFIER` must equal App Store Connect's bundle ID. We have it via `bundleIdPrefix: com.tykim.baeksoeum` + target name `BaekSoeum`. Don't rename without updating both.
 - **Privacy declaration**: if a future release adds analytics or 3rd-party SDKs, the privacy declaration in App Store Connect must be updated and `PRIVACY.md` revised.
 - **Apple TV layered icon**: already shipped (`AppIcon.brandassets`). If Apple's automated checks flag it, regenerate via `Tools/RenderIcon/install.sh`.
+
+### tvOS Archive Failure: "Your team has no devices"
+
+**Symptom**: `./Tools/release.sh tvos` (or `tvos` part of `both`) fails with:
+
+```
+error: Communication with Apple failed: Your team has no devices from
+which to generate a provisioning profile.
+error: No profiles for 'com.tykim.baeksoeum.BaekSoeum' were found:
+Xcode couldn't find any tvOS App Development provisioning profiles.
+```
+
+**Why**: Apple's automatic signing creates a Development profile first (even when archiving for App Store), and a tvOS Development profile requires at least one registered tvOS device in your developer account. iOS auto-handles this because most developers have an iPhone connected. Apple TVs aren't auto-detected the same way.
+
+**Fix (one-time, ~5 min)**:
+1. Find your Apple TV's UDID:
+   - **Easiest**: connect Apple TV to Xcode → Window → Devices and Simulators → Apple TV appears with UDID listed
+   - **Manual**: Apple TV → Settings → General → About → Long-press tvOS Version → UDID is revealed
+2. Register at https://developer.apple.com/account/resources/devices/list → ⊕ → enter UDID + name → Continue
+3. Re-run `./Tools/release.sh tvos`
+
+**Workaround if no Apple TV available**: ship iOS-only to family for now. Family members run the app on iPhone. Add tvOS in a follow-up release once a UDID is registered.
 
 ---
 
