@@ -51,9 +51,10 @@ mkdir -p "$BRAND"
 cat > "$BRAND/Contents.json" <<'JSON'
 {
   "assets" : [
-    { "filename" : "App Icon - Small.imagestack", "idiom" : "tv", "role" : "primary-app-icon", "size" : "400x240" },
-    { "filename" : "App Icon - Large.imagestack", "idiom" : "tv", "role" : "primary-app-icon", "size" : "1280x768" },
-    { "filename" : "Top Shelf Image.imageset",    "idiom" : "tv", "role" : "top-shelf-image" }
+    { "filename" : "App Icon - Small.imagestack",  "idiom" : "tv", "role" : "primary-app-icon", "size" : "400x240" },
+    { "filename" : "App Icon - Large.imagestack",  "idiom" : "tv", "role" : "primary-app-icon", "size" : "1280x768" },
+    { "filename" : "Top Shelf Image.imageset",     "idiom" : "tv", "role" : "top-shelf-image" },
+    { "filename" : "Top Shelf Image Wide.imageset","idiom" : "tv", "role" : "top-shelf-image-wide" }
   ],
   "info" : {
     "author" : "xcode",
@@ -99,12 +100,14 @@ JSON
 }
 JSON
 
-    cp "$OUT/tvos/${size_label}_${layer_lower}.png" "$content_dir/${layer_lower}.png"
+    cp "$OUT/tvos/${size_label}_${layer_lower}.png"     "$content_dir/${layer_lower}.png"
+    cp "$OUT/tvos/${size_label}@2x_${layer_lower}.png"  "$content_dir/${layer_lower}@2x.png"
 
     cat > "$content_dir/Contents.json" <<JSON
 {
   "images" : [
-    { "filename" : "${layer_lower}.png", "idiom" : "tv", "scale" : "1x" }
+    { "filename" : "${layer_lower}.png",     "idiom" : "tv", "scale" : "1x" },
+    { "filename" : "${layer_lower}@2x.png",  "idiom" : "tv", "scale" : "2x" }
   ],
   "info" : {
     "author" : "xcode",
@@ -118,14 +121,34 @@ JSON
 build_imagestack "App Icon - Small.imagestack" "small"
 build_imagestack "App Icon - Large.imagestack" "large"
 
-# Top Shelf
+# Top Shelf (1920x720, 1x + 2x)
 TS_DIR="$BRAND/Top Shelf Image.imageset"
 mkdir -p "$TS_DIR"
-cp "$OUT/tvos/top_shelf.png" "$TS_DIR/top_shelf.png"
+cp "$OUT/tvos/top_shelf.png"    "$TS_DIR/top_shelf.png"
+cp "$OUT/tvos/top_shelf@2x.png" "$TS_DIR/top_shelf@2x.png"
 cat > "$TS_DIR/Contents.json" <<'JSON'
 {
   "images" : [
-    { "filename" : "top_shelf.png", "idiom" : "tv", "scale" : "1x" }
+    { "filename" : "top_shelf.png",    "idiom" : "tv", "scale" : "1x" },
+    { "filename" : "top_shelf@2x.png", "idiom" : "tv", "scale" : "2x" }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
+JSON
+
+# Top Shelf Wide (2320x720, 1x + 2x) -- required by tvOS for the front-row "Top Shelf"
+TSW_DIR="$BRAND/Top Shelf Image Wide.imageset"
+mkdir -p "$TSW_DIR"
+cp "$OUT/tvos/top_shelf_wide.png"    "$TSW_DIR/top_shelf_wide.png"
+cp "$OUT/tvos/top_shelf_wide@2x.png" "$TSW_DIR/top_shelf_wide@2x.png"
+cat > "$TSW_DIR/Contents.json" <<'JSON'
+{
+  "images" : [
+    { "filename" : "top_shelf_wide.png",    "idiom" : "tv", "scale" : "1x" },
+    { "filename" : "top_shelf_wide@2x.png", "idiom" : "tv", "scale" : "2x" }
   ],
   "info" : {
     "author" : "xcode",

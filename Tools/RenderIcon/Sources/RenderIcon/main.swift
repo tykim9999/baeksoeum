@@ -42,10 +42,12 @@ func main() {
         write(render(v, width: size, height: size), to: "ios/Icon-\(Int(size)).png")
     }
 
-    // -- tvOS layered icons (5:3 ratio, 3 layers each at 2 sizes)
+    // -- tvOS layered icons (5:3 ratio, 3 layers each, both @1x and @2x)
     let tvSizes: [(label: String, w: CGFloat, h: CGFloat)] = [
-        ("small", 400, 240),
-        ("large", 1280, 768),
+        ("small",    400,  240),    // @1x
+        ("small@2x", 800,  480),    // @2x
+        ("large",    1280, 768),    // @1x
+        ("large@2x", 2560, 1536),   // @2x
     ]
     let tvLayers: [(label: String, layer: IconLayer)] = [
         ("back",   .back),
@@ -59,9 +61,11 @@ func main() {
         }
     }
 
-    // -- tvOS Top Shelf
-    let topShelf = TopShelfView(width: 1920, height: 720)
-    write(render(topShelf, width: 1920, height: 720), to: "tvos/top_shelf.png")
+    // -- tvOS Top Shelf (1920x720) and Top Shelf Wide (2320x720), each @1x + @2x
+    write(render(TopShelfView(width: 1920, height: 720),  width: 1920, height: 720),  to: "tvos/top_shelf.png")
+    write(render(TopShelfView(width: 3840, height: 1440), width: 3840, height: 1440), to: "tvos/top_shelf@2x.png")
+    write(render(TopShelfView(width: 2320, height: 720),  width: 2320, height: 720),  to: "tvos/top_shelf_wide.png")
+    write(render(TopShelfView(width: 4640, height: 1440), width: 4640, height: 1440), to: "tvos/top_shelf_wide@2x.png")
 }
 
 main()

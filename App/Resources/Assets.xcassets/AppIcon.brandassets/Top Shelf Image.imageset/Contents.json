@@ -1,6 +1,7 @@
 {
   "images" : [
-    { "filename" : "top_shelf.png", "idiom" : "tv", "scale" : "1x" }
+    { "filename" : "top_shelf.png",    "idiom" : "tv", "scale" : "1x" },
+    { "filename" : "top_shelf@2x.png", "idiom" : "tv", "scale" : "2x" }
   ],
   "info" : {
     "author" : "xcode",

@@ -52,5 +52,12 @@
             </array>
         </dict>
     </array>
+    <key>TVTopShelfImage</key>
+    <dict>
+        <key>TVTopShelfPrimaryImage</key>
+        <string>Top Shelf Image</string>
+        <key>TVTopShelfPrimaryImageWide</key>
+        <string>Top Shelf Image Wide</string>
+    </dict>
 </dict>
 </plist>
